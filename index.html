@@ -6,13 +6,6 @@
 <title>Calculateur de Rendement Intelligent</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<style>
-  input[type=number]::-webkit-inner-spin-button,
-  input[type=number]::-webkit-outer-spin-button { opacity: 1; }
-  .stat-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 12px 16px; text-align: center; flex: 1; }
-  .stat-label { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #6b7280; margin-bottom: 4px; }
-  .stat-value { font-size: 15px; font-weight: 600; color: #f3f4f6; }
-</style>
 </head>
 <body class="bg-gray-900 text-gray-100 font-sans min-h-screen flex flex-col justify-between">
 
@@ -23,10 +16,9 @@
   </div>
 </header>
 
-<main class="max-w-lg mx-auto my-8 p-6 bg-gray-950 rounded-2xl shadow-2xl border border-gray-800 w-full mx-4">
-
-  <h2 class="text-2xl font-bold mb-1 text-center">Simulateur d'Intérêts</h2>
-  <p class="text-gray-400 text-sm text-center mb-6">Calcule et visualise l'évolution de ton capital année après année.</p>
+<main class="max-w-md mx-auto my-auto p-6 bg-gray-950 rounded-2xl shadow-2xl border border-gray-800 w-full my-8">
+  <h2 class="text-2xl font-bold mb-2 text-center">Simulateur d'Intérêts</h2>
+  <p class="text-gray-400 text-sm text-center mb-6">Calcule combien ton argent peut te rapporter au fil des années.</p>
 
   <!-- Champs de saisie -->
   <div class="space-y-4">
@@ -46,53 +38,26 @@
         class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-emerald-500 transition-colors">
     </div>
 
-    <button onclick="calculerRendement()"
-      class="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-gray-950 font-bold p-3 rounded-lg transition-all mt-2 shadow-lg shadow-emerald-500/20">
+    <button onclick="calculerGain()"
+      class="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-gray-950 font-bold p-3 rounded-lg transition-all mt-6 shadow-lg shadow-emerald-500/20">
       Calculer le gain
     </button>
   </div>
 
-  <!-- Résultat principal -->
+  <!-- Graphique en courbe -->
+  <div class="mt-8 pt-6 border-t border-gray-800">
+    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Évolution année après année</p>
+    <div style="position: relative; width: 100%; height: 220px;">
+      <canvas id="graphiqueInterets" role="img" aria-label="Courbe d'évolution du capital avec intérêts composés"></canvas>
+    </div>
+  </div>
+
+  <!-- Résultat final -->
   <div class="mt-8 pt-6 border-t border-gray-800 text-center">
     <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Montant final estimé</p>
-    <div id="resultat" class="text-4xl font-extrabold text-emerald-400 mb-1">—</div>
-    <div id="gain-label" class="text-sm text-gray-500"></div>
+    <div id="resultat" class="text-3xl font-extrabold text-emerald-400 mb-1">1 628,89 €</div>
+    <div id="gain-label" class="text-sm text-gray-500">+628,89 € d'intérêts en 10 ans</div>
   </div>
-
-  <!-- Cartes statistiques -->
-  <div id="stats-row" class="flex gap-3 mt-4" style="display:none!important;">
-    <div class="stat-card">
-      <div class="stat-label">Capital de départ</div>
-      <div class="stat-value" id="stat-capital">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Intérêts générés</div>
-      <div class="stat-value text-emerald-400" id="stat-interets">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Rendement total</div>
-      <div class="stat-value text-emerald-400" id="stat-pct">—</div>
-    </div>
-  </div>
-
-  <!-- Graphique -->
-  <div id="chart-section" style="display:none; margin-top: 1.75rem;">
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 10px;">
-      <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Évolution annuelle</p>
-      <div style="display:flex; gap:12px; font-size:11px; color:#6b7280;">
-        <span style="display:flex;align-items:center;gap:4px;">
-          <span style="width:10px;height:10px;border-radius:2px;background:#5DCAA5;display:inline-block;"></span>Capital
-        </span>
-        <span style="display:flex;align-items:center;gap:4px;">
-          <span style="width:10px;height:10px;border-radius:2px;background:#1D9E75;display:inline-block;"></span>Intérêts
-        </span>
-      </div>
-    </div>
-    <div style="position:relative; width:100%; height:260px;">
-      <canvas id="myChart" role="img" aria-label="Graphique d'évolution du capital avec intérêts composés">Évolution du capital avec intérêts composés.</canvas>
-    </div>
-  </div>
-
 </main>
 
 <footer class="text-center p-4 text-gray-600 text-xs border-t border-gray-800 bg-gray-950">
@@ -100,126 +65,128 @@
 </footer>
 
 <script>
-let chartInstance = null;
-
-function fmt(val, decimals = 2) {
-  return val.toLocaleString('fr-FR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+// ── Utilitaire de formatage français ──────────────────────────────────────────
+function fmt(val, dec = 2) {
+  return val.toLocaleString('fr-FR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
 }
 
-function calculerRendement() {
-  const capital  = parseFloat(document.getElementById('capital').value);
-  const taux     = parseFloat(document.getElementById('taux').value) / 100;
-  const annees   = parseInt(document.getElementById('annees').value);
+// ── Construction des données pour un jeu de paramètres ───────────────────────
+function construireData(capital, taux, annees) {
+  const labels  = [];
+  const montants = [];
+  for (let i = 0; i <= annees; i++) {
+    labels.push('An ' + i);
+    montants.push(parseFloat((capital * Math.pow(1 + taux, i)).toFixed(2)));
+  }
+  return { labels, montants };
+}
 
+// ── Initialisation du graphique (données par défaut : 1 000 €, 5 %, 10 ans) ─
+const { labels: labelsInit, montants: montantsInit } = construireData(1000, 0.05, 10);
+
+const ctx = document.getElementById('graphiqueInterets').getContext('2d');
+
+// Dégradé vert sous la courbe
+const gradient = ctx.createLinearGradient(0, 0, 0, 220);
+gradient.addColorStop(0,   'rgba(16, 185, 129, 0.35)');
+gradient.addColorStop(1,   'rgba(16, 185, 129, 0.00)');
+
+const myChart = new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: labelsInit,
+    datasets: [{
+      label: 'Capital total',
+      data: montantsInit,
+      borderColor:     '#10b981',
+      borderWidth:     2.5,
+      pointBackgroundColor: '#10b981',
+      pointBorderColor:     '#111827',
+      pointBorderWidth:     2,
+      pointRadius:     4,
+      pointHoverRadius: 6,
+      backgroundColor: gradient,
+      fill: true,
+      tension: 0.4
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#111827',
+        borderColor:     '#374151',
+        borderWidth:     1,
+        titleColor:      '#9ca3af',
+        bodyColor:       '#f3f4f6',
+        padding:         10,
+        callbacks: {
+          title: (items) => items[0].label,
+          label: (item)  => '  ' + fmt(item.raw) + ' €'
+        }
+      }
+    },
+    scales: {
+      x: {
+        ticks: {
+          color: '#6b7280',
+          font:  { size: 11 },
+          autoSkip: true,
+          maxRotation: 0
+        },
+        grid:   { color: 'rgba(255,255,255,0.05)' },
+        border: { color: 'rgba(255,255,255,0.08)' }
+      },
+      y: {
+        ticks: {
+          color: '#6b7280',
+          font:  { size: 11 },
+          callback: (v) => fmt(v, 0) + ' €'
+        },
+        grid:   { color: 'rgba(255,255,255,0.05)' },
+        border: { color: 'rgba(255,255,255,0.08)' }
+      }
+    }
+  }
+});
+
+// ── Fonction principale appelée par le bouton ─────────────────────────────────
+function calculerGain() {
+  const capital = parseFloat(document.getElementById('capital').value);
+  const taux    = parseFloat(document.getElementById('taux').value) / 100;
+  const annees  = parseInt(document.getElementById('annees').value);
+
+  // Validation
   if (isNaN(capital) || isNaN(taux) || isNaN(annees) || capital < 0 || annees < 1) {
-    document.getElementById('resultat').textContent = 'Erreur de saisie';
+    document.getElementById('resultat').textContent   = 'Erreur de saisie';
+    document.getElementById('gain-label').textContent = '';
     return;
   }
 
-  // Génération des données année par année
-  const labels       = [];
-  const capitalData  = [];
-  const interetsData = [];
+  // Calcul des données année par année
+  const { labels, montants } = construireData(capital, taux, annees);
 
-  for (let i = 0; i <= annees; i++) {
-    const total = capital * Math.pow(1 + taux, i);
-    labels.push('An ' + i);
-    capitalData.push(parseFloat(capital.toFixed(2)));
-    interetsData.push(parseFloat((total - capital).toFixed(2)));
-  }
+  const valeurFinale = montants[annees];
+  const gainTotal    = valeurFinale - capital;
 
-  const valeurFinale = capitalData[annees] + interetsData[annees];
-  const gainTotal    = interetsData[annees];
-  const pctTotal     = capital > 0 ? ((gainTotal / capital) * 100).toFixed(1) : 0;
+  // Mise à jour du texte
+  document.getElementById('resultat').textContent   = fmt(valeurFinale) + ' €';
+  document.getElementById('gain-label').textContent =
+    '+' + fmt(gainTotal) + ' € d\'intérêts en ' + annees + ' an' + (annees > 1 ? 's' : '');
 
-  // Mise à jour des textes
-  document.getElementById('resultat').textContent    = fmt(valeurFinale) + ' €';
-  document.getElementById('gain-label').textContent  = '+' + fmt(gainTotal) + ' € d\'intérêts en ' + annees + ' an' + (annees > 1 ? 's' : '');
-  document.getElementById('stat-capital').textContent  = fmt(capital) + ' €';
-  document.getElementById('stat-interets').textContent = '+' + fmt(gainTotal) + ' €';
-  document.getElementById('stat-pct').textContent      = '+' + pctTotal + '%';
+  // Mise à jour dynamique du graphique
+  myChart.data.labels              = labels;
+  myChart.data.datasets[0].data   = montants;
 
-  // Affichage des sections cachées
-  document.getElementById('stats-row').style.setProperty('display', 'flex', 'important');
-  document.getElementById('chart-section').style.display = 'block';
+  // Régénération du dégradé (au cas où la hauteur aurait changé)
+  const newGradient = ctx.createLinearGradient(0, 0, 0, 220);
+  newGradient.addColorStop(0, 'rgba(16, 185, 129, 0.35)');
+  newGradient.addColorStop(1, 'rgba(16, 185, 129, 0.00)');
+  myChart.data.datasets[0].backgroundColor = newGradient;
 
-  // Destruction de l'ancien graphique avant d'en créer un nouveau
-  if (chartInstance) {
-    chartInstance.destroy();
-    chartInstance = null;
-  }
-
-  const ctx = document.getElementById('myChart').getContext('2d');
-
-  chartInstance = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [
-        {
-          label: 'Capital de départ',
-          data: capitalData,
-          backgroundColor: '#5DCAA5',
-          borderRadius: 3,
-          stack: 'stack'
-        },
-        {
-          label: 'Intérêts cumulés',
-          data: interetsData,
-          backgroundColor: '#1D9E75',
-          borderRadius: 3,
-          stack: 'stack'
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: '#111827',
-          borderColor: '#374151',
-          borderWidth: 1,
-          titleColor: '#9ca3af',
-          bodyColor: '#f3f4f6',
-          padding: 10,
-          callbacks: {
-            title: (items) => items[0].label,
-            label: (ctx) => {
-              const val = ctx.raw;
-              const total = capitalData[ctx.dataIndex] + interetsData[ctx.dataIndex];
-              if (ctx.datasetIndex === 0) return '  Capital : ' + fmt(val) + ' €';
-              return '  Intérêts : +' + fmt(val) + ' € → Total : ' + fmt(total) + ' €';
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          stacked: true,
-          ticks: {
-            color: '#6b7280',
-            font: { size: 11 },
-            autoSkip: annees > 20,
-            maxRotation: 0
-          },
-          grid: { display: false },
-          border: { color: 'rgba(255,255,255,0.08)' }
-        },
-        y: {
-          stacked: true,
-          ticks: {
-            color: '#6b7280',
-            font: { size: 11 },
-            callback: (v) => fmt(v, 0) + ' €'
-          },
-          grid: { color: 'rgba(255,255,255,0.05)' },
-          border: { color: 'rgba(255,255,255,0.08)' }
-        }
-      }
-    }
-  });
+  myChart.update();
 }
 </script>
 
