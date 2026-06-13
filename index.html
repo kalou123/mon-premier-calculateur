@@ -3,192 +3,764 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Calculateur de Rendement Intelligent</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-</head>
-<body class="bg-gray-900 text-gray-100 font-sans min-h-screen flex flex-col justify-between">
+<title>TechCalc Pro — Simulateur d'Intérêts Composés</title>
 
-<header class="border-b border-gray-800 p-4 bg-gray-950">
-  <div class="max-w-4xl mx-auto flex justify-between items-center">
-    <h1 class="text-xl font-bold text-emerald-400">⚡ TechCalc</h1>
-    <span class="text-xs bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded border border-emerald-500/20">V2.0 - Stable</span>
-  </div>
+<!-- ╔══════════════════════════════════════════════════════╗
+     ║  WHITE-LABEL : variables de couleur centralisées    ║
+     ║  Modifiez ces valeurs pour recolorer toute l'app.   ║
+     ╚══════════════════════════════════════════════════════╝ -->
+<style>
+  :root {
+    /* Accent principal (ex: vert emeraude Revolut-style) */
+    --clr-accent:        #00C896;
+    --clr-accent-dim:    rgba(0, 200, 150, 0.12);
+    --clr-accent-glow:   rgba(0, 200, 150, 0.25);
+
+    /* Courbe secondaire (versements uniquement) */
+    --clr-secondary:     #5A6478;
+    --clr-secondary-dim: rgba(90, 100, 120, 0.15);
+
+    /* Surfaces */
+    --clr-bg:            #0A0D14;
+    --clr-surface-1:     #111520;
+    --clr-surface-2:     #171C2C;
+    --clr-border:        rgba(255,255,255,0.07);
+    --clr-border-focus:  rgba(0, 200, 150, 0.5);
+
+    /* Texte */
+    --clr-text-primary:  #F0F4FF;
+    --clr-text-secondary:#8892A4;
+    --clr-text-muted:    #4A5568;
+
+    /* WHITE-LABEL : nom & badge du produit */
+    --brand-name:        "⚡ TechCalc Pro";
+    --brand-version:     "V3.0";
+
+    /* Typographie */
+    --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+</style>
+
+<!-- Inter + JetBrains Mono via Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<!-- Chart.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+<style>
+/* ─── Reset & base ───────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-main);
+  background: var(--clr-bg);
+  color: var(--clr-text-primary);
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Fond ambiant (grain + dégradé radial) ─────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 70% 10%, rgba(0,200,150,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at 10% 80%, rgba(0,100,255,0.04) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── Header ─────────────────────────────────────────────── */
+.app-header {
+  position: relative;
+  z-index: 10;
+  border-bottom: 1px solid var(--clr-border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  background: rgba(10,13,20,0.8);
+  padding: 0 24px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand-logo {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--clr-accent);
+  letter-spacing: -0.02em;
+}
+
+.brand-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--clr-accent);
+  background: var(--clr-accent-dim);
+  border: 1px solid rgba(0,200,150,0.2);
+  padding: 3px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.05em;
+}
+
+/* ─── Conteneur principal ────────────────────────────────── */
+.app-main {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 32px 16px 48px;
+}
+
+.card {
+  width: 100%;
+  max-width: 520px;
+  background: var(--clr-surface-1);
+  border: 1px solid var(--clr-border);
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.03) inset,
+    0 32px 64px rgba(0,0,0,0.5);
+}
+
+/* ─── Titre ──────────────────────────────────────────────── */
+.card-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--clr-text-primary);
+  margin-bottom: 4px;
+}
+
+.card-sub {
+  font-size: 13px;
+  color: var(--clr-text-secondary);
+  line-height: 1.5;
+  margin-bottom: 28px;
+}
+
+/* ─── Grille de champs (2 colonnes) ─────────────────────── */
+.fields-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.field-full { grid-column: 1 / -1; }
+
+.field-group { display: flex; flex-direction: column; gap: 6px; }
+
+.field-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--clr-text-secondary);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.field-input {
+  background: var(--clr-surface-2);
+  border: 1px solid var(--clr-border);
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-size: 15px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--clr-text-primary);
+  width: 100%;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -moz-appearance: textfield;
+}
+
+.field-input::-webkit-inner-spin-button,
+.field-input::-webkit-outer-spin-button { opacity: 0.4; }
+
+.field-input:focus {
+  border-color: var(--clr-border-focus);
+  box-shadow: 0 0 0 3px var(--clr-accent-glow);
+}
+
+/* ─── Bouton principal ───────────────────────────────────── */
+.btn-calculate {
+  width: 100%;
+  background: var(--clr-accent);
+  color: #000;
+  border: none;
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: var(--font-main);
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: opacity 0.15s, transform 0.1s, box-shadow 0.2s;
+  box-shadow: 0 4px 20px var(--clr-accent-glow);
+}
+
+.btn-calculate:hover  { opacity: 0.9; box-shadow: 0 4px 28px rgba(0,200,150,0.4); }
+.btn-calculate:active { transform: scale(0.985); opacity: 0.85; }
+
+/* ─── Message d'erreur ───────────────────────────────────── */
+.error-msg {
+  display: none;
+  background: rgba(255,80,80,0.1);
+  border: 1px solid rgba(255,80,80,0.25);
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-size: 12px;
+  color: #FF6B6B;
+  margin-top: 10px;
+}
+
+.error-msg.visible { display: block; }
+
+/* ─── Séparateur ─────────────────────────────────────────── */
+.divider {
+  height: 1px;
+  background: var(--clr-border);
+  margin: 28px 0;
+}
+
+/* ─── Section graphique ──────────────────────────────────── */
+.chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.section-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--clr-text-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.chart-legend {
+  display: flex;
+  gap: 14px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--clr-text-secondary);
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.chart-wrap {
+  position: relative;
+  width: 100%;
+  height: 220px;
+}
+
+/* ─── KPI Grid ───────────────────────────────────────────── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 28px;
+}
+
+.kpi-card {
+  background: var(--clr-surface-2);
+  border: 1px solid var(--clr-border);
+  border-radius: 12px;
+  padding: 14px 12px;
+  text-align: center;
+  transition: border-color 0.2s;
+}
+
+.kpi-card:last-child {
+  border-color: rgba(0,200,150,0.2);
+  background: var(--clr-accent-dim);
+}
+
+.kpi-label {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--clr-text-muted);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.kpi-value {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--clr-text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.kpi-card:last-child .kpi-value { color: var(--clr-accent); }
+
+.kpi-sub {
+  font-size: 10px;
+  color: var(--clr-text-muted);
+  margin-top: 3px;
+}
+
+/* ─── Footer ─────────────────────────────────────────────── */
+.app-footer {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 16px;
+  font-size: 11px;
+  color: var(--clr-text-muted);
+  border-top: 1px solid var(--clr-border);
+}
+
+/* ─── Responsive mobile ──────────────────────────────────── */
+@media (max-width: 480px) {
+  .card { padding: 20px 16px; border-radius: 16px; }
+  .fields-grid { grid-template-columns: 1fr; }
+  .field-full { grid-column: auto; }
+  .kpi-grid { grid-template-columns: 1fr; }
+  .kpi-card:last-child { grid-column: auto; }
+  .chart-wrap { height: 180px; }
+}
+
+/* ─── Reduced motion ─────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .btn-calculate { transition: none; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ════════════════════════════════════ HEADER ═══ -->
+<header class="app-header">
+  <!-- WHITE-LABEL : remplacez le contenu du .brand-logo par votre propre logo SVG ou texte -->
+  <span class="brand-logo">⚡ TechCalc Pro</span>
+  <span class="brand-badge">V3.0 — STABLE</span>
 </header>
 
-<main class="max-w-md mx-auto my-auto p-6 bg-gray-950 rounded-2xl shadow-2xl border border-gray-800 w-full my-8">
-  <h2 class="text-2xl font-bold mb-2 text-center">Simulateur d'Intérêts</h2>
-  <p class="text-gray-400 text-sm text-center mb-6">Calcule combien ton argent peut te rapporter au fil des années.</p>
+<!-- ════════════════════════════════════ MAIN ═══ -->
+<main class="app-main">
+  <div class="card">
 
-  <!-- Champs de saisie -->
-  <div class="space-y-4">
-    <div>
-      <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Somme de départ (€)</label>
-      <input type="number" id="capital" value="1000" min="0"
-        class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-emerald-500 transition-colors">
-    </div>
-    <div>
-      <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Taux d'intérêt annuel (%)</label>
-      <input type="number" id="taux" value="5" step="0.1" min="0"
-        class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-emerald-500 transition-colors">
-    </div>
-    <div>
-      <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Durée (en années)</label>
-      <input type="number" id="annees" value="10" min="1" max="50"
-        class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-emerald-500 transition-colors">
+    <h1 class="card-title">Simulateur d'intérêts composés</h1>
+    <p class="card-sub">Projette la croissance de ton patrimoine avec versements mensuels.</p>
+
+    <!-- ── Champs de saisie ─────────────────────── -->
+    <div class="fields-grid">
+
+      <div class="field-group field-full">
+        <label class="field-label" for="capital">Capital initial (€)</label>
+        <input class="field-input" type="number" id="capital" value="5000" min="0" step="100" placeholder="0">
+      </div>
+
+      <div class="field-group">
+        <label class="field-label" for="versement">Versement mensuel (€)</label>
+        <input class="field-input" type="number" id="versement" value="200" min="0" step="10" placeholder="0">
+      </div>
+
+      <div class="field-group">
+        <label class="field-label" for="taux">Taux annuel (%)</label>
+        <input class="field-input" type="number" id="taux" value="7" min="0" max="100" step="0.1" placeholder="0">
+      </div>
+
+      <div class="field-group field-full">
+        <label class="field-label" for="annees">Durée (années — max 50)</label>
+        <input class="field-input" type="number" id="annees" value="20" min="1" max="50" step="1" placeholder="1">
+      </div>
+
     </div>
 
-    <button onclick="calculerGain()"
-      class="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-gray-950 font-bold p-3 rounded-lg transition-all mt-6 shadow-lg shadow-emerald-500/20">
-      Calculer le gain
+    <button class="btn-calculate" id="btnCalculer" onclick="calculerRendement()">
+      Calculer mon patrimoine →
     </button>
-  </div>
 
-  <!-- Graphique en courbe -->
-  <div class="mt-8 pt-6 border-t border-gray-800">
-    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Évolution année après année</p>
-    <div style="position: relative; width: 100%; height: 220px;">
-      <canvas id="graphiqueInterets" role="img" aria-label="Courbe d'évolution du capital avec intérêts composés"></canvas>
+    <!-- Message d'erreur affiché uniquement en cas de saisie invalide -->
+    <div class="error-msg" id="errorMsg" role="alert" aria-live="polite"></div>
+
+    <div class="divider"></div>
+
+    <!-- ── Graphique double courbe ──────────────── -->
+    <div class="chart-header">
+      <span class="section-label">Évolution année par année</span>
+      <div class="chart-legend">
+        <span class="legend-item">
+          <span class="legend-dot" style="background: var(--clr-accent);"></span>
+          Patrimoine total
+        </span>
+        <span class="legend-item">
+          <span class="legend-dot" style="background: var(--clr-secondary);"></span>
+          Somme investie
+        </span>
+      </div>
     </div>
-  </div>
 
-  <!-- Résultat final -->
-  <div class="mt-8 pt-6 border-t border-gray-800 text-center">
-    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Montant final estimé</p>
-    <div id="resultat" class="text-3xl font-extrabold text-emerald-400 mb-1">1 628,89 €</div>
-    <div id="gain-label" class="text-sm text-gray-500">+628,89 € d'intérêts en 10 ans</div>
+    <div class="chart-wrap">
+      <canvas id="graphiqueInterets" role="img" aria-label="Double courbe : patrimoine total vs somme investie"></canvas>
+    </div>
+
+    <!-- ── KPIs ─────────────────────────────────── -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Total versé</div>
+        <div class="kpi-value" id="kpi-verse">—</div>
+        <div class="kpi-sub">Capital + mensualités</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Intérêts gagnés</div>
+        <div class="kpi-value" id="kpi-interets" style="color: var(--clr-accent);">—</div>
+        <div class="kpi-sub" id="kpi-pct">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Valeur finale</div>
+        <div class="kpi-value" id="kpi-final">—</div>
+        <div class="kpi-sub">Patrimoine estimé</div>
+      </div>
+    </div>
+
   </div>
 </main>
 
-<footer class="text-center p-4 text-gray-600 text-xs border-t border-gray-800 bg-gray-950">
-  Propulsé par le code • 2026
+<!-- ════════════════════════════════════ FOOTER ═══ -->
+<footer class="app-footer">
+  <!-- WHITE-LABEL : modifiez ce texte pour votre marque partenaire -->
+  Propulsé par le code · TechCalc Pro 2026 · <em>Simulation indicative, hors fiscalité</em>
 </footer>
 
+<!-- ════════════════════════════════ JAVASCRIPT ═══ -->
 <script>
-// ── Utilitaire de formatage français ──────────────────────────────────────────
+/*
+ * ══════════════════════════════════════════════════════════
+ *  TechCalc Pro V3 — Moteur de calcul & graphique
+ * ══════════════════════════════════════════════════════════
+ */
+
+// ── Utilitaires ─────────────────────────────────────────────────────────────
+
+/**
+ * Formate un nombre en euros (locale française).
+ * Utilise Math.round pour éviter les erreurs de virgule flottante JS.
+ * @param {number} val
+ * @param {number} [dec=2]
+ */
 function fmt(val, dec = 2) {
-  return val.toLocaleString('fr-FR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  const safe = Math.round(val * 100) / 100; // correction arrondi flottant
+  return safe.toLocaleString('fr-FR', {
+    minimumFractionDigits: dec,
+    maximumFractionDigits: dec
+  }) + ' €';
 }
 
-// ── Construction des données pour un jeu de paramètres ───────────────────────
-function construireData(capital, taux, annees) {
-  const labels  = [];
-  const montants = [];
-  for (let i = 0; i <= annees; i++) {
-    labels.push('An ' + i);
-    montants.push(parseFloat((capital * Math.pow(1 + taux, i)).toFixed(2)));
+/**
+ * Lit, nettoie et valide un champ numérique.
+ * - Retourne la valeur clampée entre [min, max].
+ * - Retourne null si la saisie est invalide.
+ * @param {string} id        ID de l'élément input
+ * @param {number} min
+ * @param {number} max
+ * @param {boolean} allowZero
+ */
+function readField(id, min, max, allowZero = true) {
+  const raw = document.getElementById(id).value.trim().replace(',', '.');
+  const val = parseFloat(raw);
+  if (isNaN(val)) return null;
+  if (!allowZero && val === 0) return null;
+  return Math.min(Math.max(val, min), max);
+}
+
+// ── Affichage erreur ─────────────────────────────────────────────────────────
+
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = msg;
+  el.classList.add('visible');
+}
+
+function clearError() {
+  const el = document.getElementById('errorMsg');
+  el.textContent = '';
+  el.classList.remove('visible');
+}
+
+// ── Calcul mathématique ──────────────────────────────────────────────────────
+
+/**
+ * Calcule l'évolution du patrimoine avec intérêts composés MENSUELS.
+ *
+ * Formule mensuelle : chaque mois on ajoute le versement, puis on applique
+ * le taux mensuel = (1 + tauxAnnuel)^(1/12) − 1
+ * Ce calcul est plus précis qu'un simple calcul annuel car il capitalise
+ * les versements au fur et à mesure.
+ *
+ * @param {number} capital       Capital initial en €
+ * @param {number} versement     Versement mensuel en €
+ * @param {number} tauxAnnuel    Taux annuel décimal (ex: 0.07)
+ * @param {number} annees        Durée en années (max 50)
+ * @returns {{ labels, totalData, investiData }}
+ */
+function calculerData(capital, versement, tauxAnnuel, annees) {
+  const tauxMensuel = Math.pow(1 + tauxAnnuel, 1 / 12) - 1;
+  const labels      = [];
+  const totalData   = [];   // patrimoine total (capital + intérêts + versements)
+  const investiData = [];   // somme investie brute (sans intérêts)
+
+  let patrimoineActuel = capital;
+  let sommeInvestie    = capital;
+
+  // Année 0 : point de départ
+  labels.push('An 0');
+  totalData.push(Math.round(patrimoineActuel * 100) / 100);
+  investiData.push(Math.round(sommeInvestie * 100) / 100);
+
+  for (let annee = 1; annee <= annees; annee++) {
+    // 12 mois de capitalisation par an
+    for (let mois = 0; mois < 12; mois++) {
+      patrimoineActuel = patrimoineActuel * (1 + tauxMensuel) + versement;
+      sommeInvestie   += versement;
+    }
+    labels.push('An ' + annee);
+    totalData.push(Math.round(patrimoineActuel * 100) / 100);
+    investiData.push(Math.round(sommeInvestie * 100) / 100);
   }
-  return { labels, montants };
+
+  return { labels, totalData, investiData };
 }
 
-// ── Initialisation du graphique (données par défaut : 1 000 €, 5 %, 10 ans) ─
-const { labels: labelsInit, montants: montantsInit } = construireData(1000, 0.05, 10);
+// ── Initialisation Chart.js ──────────────────────────────────────────────────
 
-const ctx = document.getElementById('graphiqueInterets').getContext('2d');
+const ctx    = document.getElementById('graphiqueInterets').getContext('2d');
 
-// Dégradé vert sous la courbe
-const gradient = ctx.createLinearGradient(0, 0, 0, 220);
-gradient.addColorStop(0,   'rgba(16, 185, 129, 0.35)');
-gradient.addColorStop(1,   'rgba(16, 185, 129, 0.00)');
+// Dégradé vert sous la courbe principale
+function buildGradient(context, colorStart, colorEnd) {
+  const chart  = context.chart;
+  const { top, bottom } = chart.chartArea || { top: 0, bottom: 200 };
+  const grad = context.chart.ctx.createLinearGradient(0, top, 0, bottom);
+  grad.addColorStop(0, colorStart);
+  grad.addColorStop(1, colorEnd);
+  return grad;
+}
+
+// Données initiales (identiques aux valeurs par défaut des champs)
+const initData = calculerData(5000, 200, 0.07, 20);
 
 const myChart = new Chart(ctx, {
   type: 'line',
   data: {
-    labels: labelsInit,
-    datasets: [{
-      label: 'Capital total',
-      data: montantsInit,
-      borderColor:     '#10b981',
-      borderWidth:     2.5,
-      pointBackgroundColor: '#10b981',
-      pointBorderColor:     '#111827',
-      pointBorderWidth:     2,
-      pointRadius:     4,
-      pointHoverRadius: 6,
-      backgroundColor: gradient,
-      fill: true,
-      tension: 0.4
-    }]
+    labels: initData.labels,
+    datasets: [
+      {
+        // Courbe 1 : patrimoine total
+        label: 'Patrimoine total',
+        data: initData.totalData,
+        borderColor: 'var(--clr-accent)',  // #00C896
+        borderWidth: 2.5,
+        pointRadius: 0,             // points masqués par défaut (trop nombreux)
+        pointHoverRadius: 5,
+        pointHoverBackgroundColor: '#00C896',
+        pointHoverBorderColor: '#0A0D14',
+        pointHoverBorderWidth: 2,
+        backgroundColor: function(context) {
+          if (!context.chart.chartArea) return 'transparent';
+          return buildGradient(context,
+            'rgba(0,200,150,0.25)',
+            'rgba(0,200,150,0.00)'
+          );
+        },
+        fill: true,
+        tension: 0.4,
+        order: 1
+      },
+      {
+        // Courbe 2 : somme investie (sans intérêts)
+        label: 'Somme investie',
+        data: initData.investiData,
+        borderColor: '#5A6478',
+        borderWidth: 1.5,
+        borderDash: [5, 4],
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHoverBackgroundColor: '#5A6478',
+        pointHoverBorderColor: '#0A0D14',
+        pointHoverBorderWidth: 2,
+        backgroundColor: 'transparent',
+        fill: false,
+        tension: 0.3,
+        order: 2
+      }
+    ]
   },
   options: {
     responsive: true,
     maintainAspectRatio: false,
+    interaction: {
+      mode: 'index',          // tooltip affiche les 2 courbes en même temps
+      intersect: false
+    },
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: '#111827',
-        borderColor:     '#374151',
-        borderWidth:     1,
-        titleColor:      '#9ca3af',
-        bodyColor:       '#f3f4f6',
-        padding:         10,
+        backgroundColor: '#111520',
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 1,
+        titleColor: '#8892A4',
+        bodyColor: '#F0F4FF',
+        padding: 12,
+        displayColors: true,
         callbacks: {
           title: (items) => items[0].label,
-          label: (item)  => '  ' + fmt(item.raw) + ' €'
+          label: (item) => {
+            const label = item.dataset.label;
+            const val   = item.raw;
+            return '  ' + label + ' : ' + fmt(val);
+          },
+          afterBody: (items) => {
+            // Affiche l'écart (= intérêts cumulés) directement dans le tooltip
+            if (items.length < 2) return '';
+            const interets = items[0].raw - items[1].raw;
+            return ['', '  ↗ Intérêts : +' + fmt(interets)];
+          }
         }
       }
     },
     scales: {
       x: {
         ticks: {
-          color: '#6b7280',
-          font:  { size: 11 },
+          color: '#4A5568',
+          font: { size: 10, family: 'var(--font-mono)' },
           autoSkip: true,
+          maxTicksLimit: 11,
           maxRotation: 0
         },
-        grid:   { color: 'rgba(255,255,255,0.05)' },
-        border: { color: 'rgba(255,255,255,0.08)' }
+        grid:   { color: 'rgba(255,255,255,0.04)' },
+        border: { color: 'rgba(255,255,255,0.06)' }
       },
       y: {
         ticks: {
-          color: '#6b7280',
-          font:  { size: 11 },
-          callback: (v) => fmt(v, 0) + ' €'
+          color: '#4A5568',
+          font: { size: 10 },
+          callback: (v) => {
+            if (v >= 1_000_000) return (v / 1_000_000).toFixed(1) + 'M €';
+            if (v >= 1_000)     return (v / 1_000).toFixed(0) + 'k €';
+            return v + ' €';
+          }
         },
-        grid:   { color: 'rgba(255,255,255,0.05)' },
-        border: { color: 'rgba(255,255,255,0.08)' }
+        grid:   { color: 'rgba(255,255,255,0.04)' },
+        border: { color: 'rgba(255,255,255,0.06)' }
       }
+    },
+    animation: {
+      duration: 500,
+      easing: 'easeInOutQuart'
     }
   }
 });
 
-// ── Fonction principale appelée par le bouton ─────────────────────────────────
-function calculerGain() {
-  const capital = parseFloat(document.getElementById('capital').value);
-  const taux    = parseFloat(document.getElementById('taux').value) / 100;
-  const annees  = parseInt(document.getElementById('annees').value);
+// ── KPI initial ───────────────────────────────────────────────────────────────
+function updateKPIs(totalVerse, interets, valeurFinale) {
+  const pct = totalVerse > 0 ? ((interets / totalVerse) * 100).toFixed(1) : '0.0';
+  document.getElementById('kpi-verse').textContent    = fmt(totalVerse);
+  document.getElementById('kpi-interets').textContent = '+' + fmt(interets);
+  document.getElementById('kpi-pct').textContent      = '+' + pct + '% de rendement';
+  document.getElementById('kpi-final').textContent    = fmt(valeurFinale);
+}
 
-  // Validation
-  if (isNaN(capital) || isNaN(taux) || isNaN(annees) || capital < 0 || annees < 1) {
-    document.getElementById('resultat').textContent   = 'Erreur de saisie';
-    document.getElementById('gain-label').textContent = '';
+// Initialisation des KPIs avec les valeurs par défaut
+(function initKPIs() {
+  const d = initData;
+  const n = d.totalData.length - 1;
+  updateKPIs(d.investiData[n], d.totalData[n] - d.investiData[n], d.totalData[n]);
+})();
+
+// ── Fonction principale ───────────────────────────────────────────────────────
+
+/**
+ * calculerRendement()
+ * Appelée au clic sur le bouton.
+ * 1. Valide et nettoie toutes les entrées.
+ * 2. Lance le calcul mensuel.
+ * 3. Met à jour le graphique et les KPIs.
+ */
+function calculerRendement() {
+  clearError();
+
+  // ── Validation bulletproof ─────────────────────
+  const capital   = readField('capital',   0,   10_000_000, true);
+  const versement = readField('versement', 0,   100_000,    true);
+  const taux      = readField('taux',      0,   100,        true);
+  let   annees    = readField('annees',    1,   50,         false);
+
+  const erreurs = [];
+  if (capital   === null) erreurs.push('Capital initial invalide.');
+  if (versement === null) erreurs.push('Versement mensuel invalide.');
+  if (taux      === null) erreurs.push('Taux annuel invalide.');
+  if (annees    === null) { erreurs.push('Durée invalide (min 1, max 50 ans).'); annees = 1; }
+
+  // Si capital ET versement sont 0 : pas de simulation possible
+  if (capital === 0 && versement === 0) {
+    erreurs.push('Renseigne au moins un capital initial ou un versement mensuel.');
+  }
+
+  if (erreurs.length > 0) {
+    showError(erreurs.join(' '));
     return;
   }
 
-  // Calcul des données année par année
-  const { labels, montants } = construireData(capital, taux, annees);
+  // Sécurité supplémentaire : on plafonne annees à 50
+  annees = Math.min(Math.floor(annees), 50);
 
-  const valeurFinale = montants[annees];
-  const gainTotal    = valeurFinale - capital;
+  // ── Calcul ─────────────────────────────────────
+  const tauxDecimal = taux / 100;
+  const data        = calculerData(capital, versement, tauxDecimal, annees);
 
-  // Mise à jour du texte
-  document.getElementById('resultat').textContent   = fmt(valeurFinale) + ' €';
-  document.getElementById('gain-label').textContent =
-    '+' + fmt(gainTotal) + ' € d\'intérêts en ' + annees + ' an' + (annees > 1 ? 's' : '');
+  const valeurFinale = data.totalData[data.totalData.length - 1];
+  const totalVerse   = data.investiData[data.investiData.length - 1];
+  const interets     = valeurFinale - totalVerse;
 
-  // Mise à jour dynamique du graphique
-  myChart.data.labels              = labels;
-  myChart.data.datasets[0].data   = montants;
-
-  // Régénération du dégradé (au cas où la hauteur aurait changé)
-  const newGradient = ctx.createLinearGradient(0, 0, 0, 220);
-  newGradient.addColorStop(0, 'rgba(16, 185, 129, 0.35)');
-  newGradient.addColorStop(1, 'rgba(16, 185, 129, 0.00)');
-  myChart.data.datasets[0].backgroundColor = newGradient;
-
+  // ── Mise à jour du graphique ───────────────────
+  myChart.data.labels              = data.labels;
+  myChart.data.datasets[0].data   = data.totalData;
+  myChart.data.datasets[1].data   = data.investiData;
   myChart.update();
+
+  // ── Mise à jour des KPIs ───────────────────────
+  updateKPIs(totalVerse, interets, valeurFinale);
 }
+
+// ── Recalcul automatique en temps réel (optionnel, debounced) ────────────────
+let debounceTimer;
+['capital', 'versement', 'taux', 'annees'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(calculerRendement, 350); // attend 350 ms après la dernière frappe
+  });
+});
 </script>
+
+<!-- ════════════════════════════════ VERCEL ANALYTICS ═══ -->
+<!-- WHITE-LABEL : supprimez cette ligne si vous déployez hors Vercel -->
+<script defer src="/_vercel/insights/script.js"></script>
 
 </body>
 </html>
